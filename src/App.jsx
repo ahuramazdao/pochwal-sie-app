@@ -302,12 +302,29 @@ export default function App() {
     }, 'image/jpeg', 0.85);
   };
 
-  const handleCopyText = async () => {
+  const handleCopyText = async (includeImage = false) => {
     const text = CONFIG.postTemplate(clubName, selectedAmount);
+    
     try {
-      await navigator.clipboard.writeText(text);
+      if (includeImage && canvasRef.current && window.ClipboardItem) {
+        canvasRef.current.toBlob(async (blob) => {
+          try {
+            const data = [new ClipboardItem({ 
+              "image/png": blob,
+              "text/plain": new Blob([text], { type: "text/plain" })
+            })];
+            await navigator.clipboard.write(data);
+            toast.success("Grafika i tekst gotowe! Wklej je (Ctrl+V) na social media.");
+          } catch (err) {
+            await navigator.clipboard.writeText(text);
+            toast.success("Skopiowano tekst! (Przeglądarka zablokowała kopiowanie obrazka)");
+          }
+        }, 'image/png');
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast.success("Tekst posta skopiowany!");
+      }
       setIsCopied(true);
-      toast.success("Skopiowano do schowka!");
       setTimeout(() => setIsCopied(false), 3000);
     } catch (err) {
       toast.error("Nie udało się skopiować");
@@ -569,27 +586,31 @@ export default function App() {
 const ShareModal = ({ isOpen, onClose, onShareSystem, onCopyText }) => {
   if (!isOpen) return null;
 
-  const handleSocialClick = (platform) => {
-    onCopyText(false); // Copy text silently
-    toast.success(`Tekst posta skopiowany! Otwieram ${platform}...`);
+  const handleSocialClick = async (platform) => {
+    // Kopiuj obrazek i tekst do schowka
+    await onCopyText(true);
     
+    // Otwórz platformę po krótkiej chwili, aby użytkownik zobaczył toast
     setTimeout(() => {
-      if (platform === 'Facebook') window.open('https://www.facebook.com', '_blank');
-      if (platform === 'Instagram') window.open('https://www.instagram.com', '_blank');
-      if (platform === 'WhatsApp') window.open('https://web.whatsapp.com', '_blank');
-    }, 1000);
+      const urls = {
+        'Facebook': 'https://www.facebook.com',
+        'Instagram': 'https://www.instagram.com',
+        'WhatsApp': 'https://web.whatsapp.com'
+      };
+      if (urls[platform]) window.open(urls[platform], '_blank');
+    }, 1200);
   };
 
   return (
     <div className="ds-modal-overlay" onClick={onClose}>
       <div className="ds-modal" onClick={e => e.stopPropagation()}>
         <div className="ds-modal-header">
-          <h2 className="ds-card-title" style={{ fontSize: 'var(--font-size-lg)' }}>Udostępnij grafikę</h2>
+          <h2 className="ds-card-title" style={{ fontSize: 'var(--font-size-lg)' }}>Udostępnij sukces</h2>
           <button className="tweaks-close" onClick={onClose} style={{ color: 'var(--navy-800)' }}>&times;</button>
         </div>
         <div className="ds-modal-body">
-          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)', textAlign: 'center' }}>
-            Wybierz platformę, na której chcesz się pochwalić sukcesem.
+          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)', textAlign: 'center', marginBottom: 'var(--space-2)' }}>
+            Wybierz platformę i użyj <strong>Wklej (Ctrl+V)</strong> w oknie posta.
           </p>
           
           <div className="ds-share-grid">
@@ -611,17 +632,22 @@ const ShareModal = ({ isOpen, onClose, onShareSystem, onCopyText }) => {
             </button>
           </div>
 
-          <div style={{ marginTop: 'var(--space-6)', padding: 'var(--space-4)', background: 'var(--red-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--red-100)' }}>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--red-700)', fontWeight: 600, marginBottom: '4px' }}>
-              💡 Wskazówka dla komputerów:
-            </p>
-            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--red-600)', lineHeight: '1.4' }}>
-              Social media na komputerze nie pozwalają na automatyczne wstawienie obrazka z przeglądarki. **Pobierz grafikę**, a tekst posta skopiujemy dla Ciebie automatycznie!
-            </p>
+          <div style={{ marginTop: 'var(--space-6)', padding: 'var(--space-5)', background: 'var(--navy-50)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--navy-100)' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
+              <div style={{ fontSize: '20px' }}>🚀</div>
+              <div>
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--navy-800)', fontWeight: 700, marginBottom: '4px' }}>
+                  Metoda "Wklej i Gotowe"
+                </p>
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--navy-600)', lineHeight: '1.5' }}>
+                  Po kliknięciu w ikonę, Twoja <strong>grafika i tekst</strong> zostaną skopiowane. Gdy otworzy się strona, po prostu wklej treść do nowego posta!
+                </p>
+              </div>
+            </div>
           </div>
         </div>
         <div className="ds-modal-footer">
-          Kliknięcie w ikonę automatycznie kopiuje treść posta.
+          Na telefonie? Użyj przycisku "Inne" dla pełnej automatyzacji.
         </div>
       </div>
     </div>
