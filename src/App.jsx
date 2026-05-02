@@ -46,8 +46,10 @@ const CONFIG = {
     calendar: "https://programydlaklubow.pl/kalendarz-dotacji-i-programow-dla-klubow-sportowych",
     apply: "https://programydlaklubow.pl/zgloszenia"
   },
-  postTemplate: (clubName, amount) => 
-    `Mamy to! 🎉\n\nNasz klub ${clubName || '[Nazwa Klubu]'} pozyskał ${amount.toLocaleString('pl-PL')} zł z Programu KLUB! 💪\n\nDziękujemy za wsparcie.`
+  postTemplate: (clubName, amount) => {
+    const clubHashtag = clubName ? clubName.replace(/\s+/g, '') : 'Klub';
+    return `Mamy to! 🎉\n\nNasz klub ${clubName || '[Nazwa Klubu]'} pozyskał ${amount.toLocaleString('pl-PL')} zł z Programu KLUB! 💪\n\nDziękujemy za wsparcie.\n\n#ProgramKlub #ProgramyDlaKlubow #${clubHashtag}`;
+  }
 };
 
 export default function App() {
