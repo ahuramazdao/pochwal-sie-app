@@ -302,33 +302,39 @@ export default function App() {
     }, 'image/jpeg', 0.85);
   };
 
-  const handleCopyText = async (includeImage = false) => {
+  const handleCopyText = async (silent = false) => {
     const text = CONFIG.postTemplate(clubName, selectedAmount);
-    
     try {
-      if (includeImage && canvasRef.current && window.ClipboardItem) {
-        canvasRef.current.toBlob(async (blob) => {
-          try {
-            const data = [new ClipboardItem({ 
-              "image/png": blob,
-              "text/plain": new Blob([text], { type: "text/plain" })
-            })];
-            await navigator.clipboard.write(data);
-            toast.success("Grafika i tekst gotowe! Wklej je (Ctrl+V) na social media.");
-          } catch (err) {
-            await navigator.clipboard.writeText(text);
-            toast.success("Skopiowano tekst! (Przeglądarka zablokowała kopiowanie obrazka)");
-          }
-        }, 'image/png');
-      } else {
-        await navigator.clipboard.writeText(text);
-        toast.success("Tekst posta skopiowany!");
-      }
+      await navigator.clipboard.writeText(text);
       setIsCopied(true);
+      if (!silent) toast.success("Tekst posta skopiowany!");
       setTimeout(() => setIsCopied(false), 3000);
+      return true;
     } catch (err) {
-      toast.error("Nie udało się skopiować");
+      if (!silent) toast.error("Nie udało się skopiować tekstu");
+      return false;
     }
+  };
+
+  const handleCopyImage = async (silent = false) => {
+    if (!canvasRef.current || !window.ClipboardItem) {
+      if (!silent) toast.error("Twoja przeglądarka nie obsługuje kopiowania obrazów.");
+      return false;
+    }
+    
+    return new Promise((resolve) => {
+      canvasRef.current.toBlob(async (blob) => {
+        try {
+          const data = [new ClipboardItem({ "image/png": blob })];
+          await navigator.clipboard.write(data);
+          if (!silent) toast.success("Grafika skopiowana do schowka!");
+          resolve(true);
+        } catch (err) {
+          if (!silent) toast.error("Błąd kopiowania grafiki");
+          resolve(false);
+        }
+      }, 'image/png');
+    });
   };
 
   return (
@@ -475,19 +481,27 @@ export default function App() {
                   )}
                 </div>
               </div>
-              <div className="ds-card-footer" style={{ justifyContent: 'center', gap: 'var(--space-3)' }}>
+              <div className="ds-card-footer" style={{ justifyContent: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                 <button 
-                  className={`ds-btn ds-btn-lg ds-btn-primary ${!isCanvasReady ? 'ds-btn-disabled' : ''}`} 
+                  className={`ds-btn ds-btn-md ds-btn-primary ${!isCanvasReady ? 'ds-btn-disabled' : ''}`} 
                   onClick={handleDownload}
+                  style={{ flex: '1 1 auto', minWidth: '140px', justifyContent: 'center' }}
                 >
-                  <Download size={18} /> Pobierz Grafikę
+                  <Download size={16} /> Pobierz
                 </button>
                 <button 
-                  className={`ds-btn ds-btn-lg ds-btn-secondary ${!isCanvasReady ? 'ds-btn-disabled' : ''}`} 
-                  onClick={handleShare}
-                  title="Udostępnij grafikę bezpośrednio na Facebook lub Instagram"
+                  className={`ds-btn ds-btn-md ds-btn-secondary ${!isCanvasReady ? 'ds-btn-disabled' : ''}`} 
+                  onClick={() => handleCopyImage()}
+                  style={{ flex: '1 1 auto', minWidth: '140px', justifyContent: 'center' }}
                 >
-                  <Share2 size={18} /> Udostępnij
+                  <Copy size={16} /> Kopiuj Grafikę
+                </button>
+                <button 
+                  className={`ds-btn ds-btn-md ds-btn-outline-secondary ${!isCanvasReady ? 'ds-btn-disabled' : ''}`} 
+                  onClick={handleShare}
+                  style={{ flex: '1 1 auto', minWidth: '140px', justifyContent: 'center' }}
+                >
+                  <Share2 size={16} /> Udostępnij
                 </button>
               </div>
             </div>
@@ -578,76 +592,85 @@ export default function App() {
         onClose={() => setShowShareModal(false)}
         onShareSystem={handleShareSystem}
         onCopyText={handleCopyText}
+        onCopyImage={handleCopyImage}
       />
     </div>
   );
 }
 
-const ShareModal = ({ isOpen, onClose, onShareSystem, onCopyText }) => {
+const ShareModal = ({ isOpen, onClose, onShareSystem, onCopyText, onCopyImage }) => {
   if (!isOpen) return null;
 
-  const handleSocialClick = async (platform) => {
-    // Kopiuj obrazek i tekst do schowka
-    await onCopyText(true);
-    
-    // Otwórz platformę po krótkiej chwili, aby użytkownik zobaczył toast
-    setTimeout(() => {
-      const urls = {
-        'Facebook': 'https://www.facebook.com',
-        'Instagram': 'https://www.instagram.com',
-        'WhatsApp': 'https://web.whatsapp.com'
-      };
-      if (urls[platform]) window.open(urls[platform], '_blank');
-    }, 1200);
+  const handlePlatformOpen = (platform) => {
+    const urls = {
+      'Facebook': 'https://www.facebook.com',
+      'Instagram': 'https://www.instagram.com',
+      'WhatsApp': 'https://web.whatsapp.com'
+    };
+    if (urls[platform]) window.open(urls[platform], '_blank');
   };
 
   return (
     <div className="ds-modal-overlay" onClick={onClose}>
       <div className="ds-modal" onClick={e => e.stopPropagation()}>
         <div className="ds-modal-header">
-          <h2 className="ds-card-title" style={{ fontSize: 'var(--font-size-lg)' }}>Udostępnij sukces</h2>
+          <h2 className="ds-card-title" style={{ fontSize: 'var(--font-size-lg)' }}>Udostępnij sukces w 3 krokach</h2>
           <button className="tweaks-close" onClick={onClose} style={{ color: 'var(--navy-800)' }}>&times;</button>
         </div>
-        <div className="ds-modal-body">
-          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)', textAlign: 'center', marginBottom: 'var(--space-2)' }}>
-            Wybierz platformę i użyj <strong>Wklej (Ctrl+V)</strong> w oknie posta.
-          </p>
+        <div className="ds-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
           
-          <div className="ds-share-grid">
-            <button className="ds-share-btn facebook" onClick={() => handleSocialClick('Facebook')}>
-              <Facebook size={32} className="ds-share-icon" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            
+            <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--navy-800)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>1</div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--navy-900)' }}>Kopiuj Grafikę</p>
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>Obrazek trafi do Twojego schowka.</p>
+              </div>
+              <button className="ds-btn ds-btn-sm ds-btn-secondary" onClick={() => onCopyImage()}>Kopiuj</button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--navy-800)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>2</div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--navy-900)' }}>Kopiuj Tekst</p>
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>Treść posta zostanie skopiowana.</p>
+              </div>
+              <button className="ds-btn ds-btn-sm ds-btn-secondary" onClick={() => onCopyText()}>Kopiuj</button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--navy-800)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>3</div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--navy-900)' }}>Wybierz platformę i wklej!</p>
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>W oknie posta użyj Ctrl+V (Wklej).</p>
+              </div>
+            </div>
+
+          </div>
+
+          <div className="ds-share-grid" style={{ marginTop: 0 }}>
+            <button className="ds-share-btn facebook" onClick={() => handlePlatformOpen('Facebook')}>
+              <Facebook size={28} className="ds-share-icon" />
               <span className="ds-share-label">Facebook</span>
             </button>
-            <button className="ds-share-btn instagram" onClick={() => handleSocialClick('Instagram')}>
-              <Instagram size={32} className="ds-share-icon" />
+            <button className="ds-share-btn instagram" onClick={() => handlePlatformOpen('Instagram')}>
+              <Instagram size={28} className="ds-share-icon" />
               <span className="ds-share-label">Instagram</span>
             </button>
-            <button className="ds-share-btn whatsapp" onClick={() => handleSocialClick('WhatsApp')}>
-              <MessageCircle size={32} className="ds-share-icon" />
+            <button className="ds-share-btn whatsapp" onClick={() => handlePlatformOpen('WhatsApp')}>
+              <MessageCircle size={28} className="ds-share-icon" />
               <span className="ds-share-label">WhatsApp</span>
             </button>
             <button className="ds-share-btn system" onClick={onShareSystem}>
-              <Share2 size={32} className="ds-share-icon" />
-              <span className="ds-share-label">Inne</span>
+              <Share2 size={28} className="ds-share-icon" />
+              <span className="ds-share-label">Systemowe</span>
             </button>
           </div>
 
-          <div style={{ marginTop: 'var(--space-6)', padding: 'var(--space-5)', background: 'var(--navy-50)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--navy-100)' }}>
-            <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
-              <div style={{ fontSize: '20px' }}>🚀</div>
-              <div>
-                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--navy-800)', fontWeight: 700, marginBottom: '4px' }}>
-                  Metoda "Wklej i Gotowe"
-                </p>
-                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--navy-600)', lineHeight: '1.5' }}>
-                  Po kliknięciu w ikonę, Twoja <strong>grafika i tekst</strong> zostaną skopiowane. Gdy otworzy się strona, po prostu wklej treść do nowego posta!
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
-        <div className="ds-modal-footer">
-          Na telefonie? Użyj przycisku "Inne" dla pełnej automatyzacji.
+        <div className="ds-modal-footer" style={{ background: 'var(--red-50)', color: 'var(--red-700)', fontWeight: 600 }}>
+          💡 Na telefonie? Przycisk "Systemowe" zrobi wszystko za Ciebie!
         </div>
       </div>
     </div>
