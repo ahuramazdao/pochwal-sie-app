@@ -59,6 +59,7 @@ export default function App() {
   const [bgImage, setBgImage] = useState(null);
   const [isCopied, setIsCopied] = useState(false);
   const [counterValue, setCounterValue] = useState(127);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const canvasRef = useRef(null);
 
@@ -261,14 +262,17 @@ export default function App() {
     });
   };
 
-  const handleShare = async () => {
+  const handleShare = () => {
+    setShowShareModal(true);
+  };
+
+  const handleShareSystem = async () => {
     if (!canvasRef.current) return;
 
     canvasRef.current.toBlob(async (blob) => {
       const file = new File([blob], `sukces-${slugify(clubName)}.jpg`, { type: 'image/jpeg' });
       const postText = CONFIG.postTemplate(clubName, selectedAmount);
 
-      // Web Share API z plikiem (działa na mobile: Android Chrome, iOS Safari)
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
@@ -276,28 +280,24 @@ export default function App() {
             text: postText,
             files: [file],
           });
+          setShowShareModal(false);
         } catch (err) {
           if (err.name !== 'AbortError') toast.error('Nie udało się udostępnić.');
         }
       } else if (navigator.share) {
-        // Fallback: udostępnij bez pliku (tekst + URL)
         try {
           await navigator.share({
             title: 'Pozyskaliśmy dotację z Programu KLUB!',
             text: postText,
-            url: 'https://programydlaklubow.pl',
+            url: window.location.href,
           });
+          setShowShareModal(false);
         } catch (err) {
           if (err.name !== 'AbortError') toast.error('Nie udało się udostępnić.');
         }
       } else {
-        // Fallback desktop: skopiuj tekst + poinformuj o pobraniu
-        try {
-          await navigator.clipboard.writeText(postText);
-          toast.success('Tekst skopiowany! Na komputerze pobierz grafikę i wklej ją ręcznie do posta.');
-        } catch {
-          toast.error('Twoja przeglądarka nie obsługuje udostępniania.');
-        }
+        handleCopyText();
+        setShowShareModal(false);
       }
     }, 'image/jpeg', 0.85);
   };
@@ -554,6 +554,76 @@ export default function App() {
           <p><a href={CONFIG.utmLinks.footer} style={{ color: 'var(--red-400)', textDecoration: 'none', fontWeight: 600 }}>ProgramyDlaKlubow.pl</a></p>
         </div>
       </footer>
+
+      {/* SHARE MODAL */}
+      <ShareModal 
+        isOpen={showShareModal} 
+        onClose={() => setShowShareModal(false)}
+        onShareSystem={handleShareSystem}
+        onCopyText={handleCopyText}
+      />
     </div>
   );
 }
+
+const ShareModal = ({ isOpen, onClose, onShareSystem, onCopyText }) => {
+  if (!isOpen) return null;
+
+  const handleSocialClick = (platform) => {
+    onCopyText(false); // Copy text silently
+    toast.success(`Tekst posta skopiowany! Otwieram ${platform}...`);
+    
+    setTimeout(() => {
+      if (platform === 'Facebook') window.open('https://www.facebook.com', '_blank');
+      if (platform === 'Instagram') window.open('https://www.instagram.com', '_blank');
+      if (platform === 'WhatsApp') window.open('https://web.whatsapp.com', '_blank');
+    }, 1000);
+  };
+
+  return (
+    <div className="ds-modal-overlay" onClick={onClose}>
+      <div className="ds-modal" onClick={e => e.stopPropagation()}>
+        <div className="ds-modal-header">
+          <h2 className="ds-card-title" style={{ fontSize: 'var(--font-size-lg)' }}>Udostępnij grafikę</h2>
+          <button className="tweaks-close" onClick={onClose} style={{ color: 'var(--navy-800)' }}>&times;</button>
+        </div>
+        <div className="ds-modal-body">
+          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)', textAlign: 'center' }}>
+            Wybierz platformę, na której chcesz się pochwalić sukcesem.
+          </p>
+          
+          <div className="ds-share-grid">
+            <button className="ds-share-btn facebook" onClick={() => handleSocialClick('Facebook')}>
+              <Facebook size={32} className="ds-share-icon" />
+              <span className="ds-share-label">Facebook</span>
+            </button>
+            <button className="ds-share-btn instagram" onClick={() => handleSocialClick('Instagram')}>
+              <Instagram size={32} className="ds-share-icon" />
+              <span className="ds-share-label">Instagram</span>
+            </button>
+            <button className="ds-share-btn whatsapp" onClick={() => handleSocialClick('WhatsApp')}>
+              <MessageCircle size={32} className="ds-share-icon" />
+              <span className="ds-share-label">WhatsApp</span>
+            </button>
+            <button className="ds-share-btn system" onClick={onShareSystem}>
+              <Share2 size={32} className="ds-share-icon" />
+              <span className="ds-share-label">Inne</span>
+            </button>
+          </div>
+
+          <div style={{ marginTop: 'var(--space-6)', padding: 'var(--space-4)', background: 'var(--red-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--red-100)' }}>
+            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--red-700)', fontWeight: 600, marginBottom: '4px' }}>
+              💡 Wskazówka dla komputerów:
+            </p>
+            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--red-600)', lineHeight: '1.4' }}>
+              Social media na komputerze nie pozwalają na automatyczne wstawienie obrazka z przeglądarki. **Pobierz grafikę**, a tekst posta skopiujemy dla Ciebie automatycznie!
+            </p>
+          </div>
+        </div>
+        <div className="ds-modal-footer">
+          Kliknięcie w ikonę automatycznie kopiuje treść posta.
+        </div>
+      </div>
+    </div>
+  );
+};

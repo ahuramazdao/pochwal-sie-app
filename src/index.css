@@ -1205,3 +1205,101 @@ footer a:hover {
   transform: scale(1.1);
   transition: all 0.2s;
 }
+
+/* ─── SHARE MODAL ────────────────────────────────────────────────────── */
+.ds-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 17, 40, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: var(--space-4);
+  animation: modal-fade-in var(--transition-base);
+}
+
+.ds-modal {
+  background: white;
+  width: 100%;
+  max-width: 480px;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-2xl);
+  overflow: hidden;
+  animation: modal-slide-up var(--transition-base);
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.ds-modal-header {
+  padding: var(--space-6) var(--space-6) var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ds-modal-body {
+  padding: var(--space-6);
+}
+
+.ds-share-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.ds-share-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  color: var(--navy-800);
+}
+
+.ds-share-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--navy-300);
+}
+
+.ds-share-btn.facebook:hover { background: #f0f2f5; border-color: #1877f2; color: #1877f2; }
+.ds-share-btn.instagram:hover { background: #fff5f8; border-color: #e4405f; color: #e4405f; }
+.ds-share-btn.whatsapp:hover { background: #e7f8ef; border-color: #25d366; color: #25d366; }
+.ds-share-btn.system:hover { background: var(--gray-50); border-color: var(--navy-600); color: var(--navy-600); }
+
+.ds-share-icon {
+  font-size: 24px;
+}
+
+.ds-share-label {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ds-modal-footer {
+  padding: var(--space-4) var(--space-6);
+  background: var(--gray-50);
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+}
