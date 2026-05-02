@@ -47,7 +47,7 @@ const CONFIG = {
     apply: "https://programydlaklubow.pl/zgloszenia"
   },
   postTemplate: (clubName, amount) => 
-    `Mamy to! 🎉 Nasz klub ${clubName || '[Nazwa Klubu]'} pozyskał ${amount.toLocaleString('pl-PL')} zł z Programu KLUB! 💪 Dziękujemy za wsparcie.`
+    `Mamy to! 🎉\n\nNasz klub ${clubName || '[Nazwa Klubu]'} pozyskał ${amount.toLocaleString('pl-PL')} zł z Programu KLUB! 💪\n\nDziękujemy za wsparcie.`
 };
 
 export default function App() {
